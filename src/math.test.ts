@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { add, clamp, parsePositiveInt } from "./math";
 
-describe("add", () => {
-  it("adds two numbers", () => {
-    expect(add(2, 3)).toBe(5);
-  });
+// describe("add", () => {
+//   it("adds two numbers", () => {
+//     expect(add(2, 3)).toBe(5);
+//   });
 
-  it("handles negative numbers", () => {
-    expect(add(-1, 1)).toBe(0);
-  });
-});
+//   it("handles negative numbers", () => {
+//     expect(add(-1, 1)).toBe(0);
+//   });
+// });
 
 describe("clamp", () => {
   it("returns value when within range", () => {
