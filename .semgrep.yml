@@ -1,0 +1,32 @@
+rules:
+  - id: hardcoded-api-key
+    patterns:
+      - pattern-either:
+          - pattern: const $KEY = "$VALUE"
+          - pattern: const $KEY = '$VALUE'
+      - metavariable-regex:
+          metavariable: $KEY
+          regex: (?i)(api[_-]?key|secret|token|password)
+    message: 疑似硬编码密钥，请改用环境变量或密钥管理服务
+    severity: ERROR
+    languages: [javascript, typescript]
+
+  - id: dangerous-eval
+    pattern: eval($X)
+    message: eval() 可能导致代码注入，请改用安全替代方案
+    severity: ERROR
+    languages: [javascript, typescript]
+
+  - id: sql-string-concat
+    pattern: |
+      'SELECT ...' + $INPUT
+    message: 疑似 SQL 字符串拼接，存在注入风险，请使用参数化查询
+    severity: WARNING
+    languages: [javascript, typescript]
+
+  - id: unsafe-html-concat
+    pattern: |
+      `<div ...>${$USER_INPUT}</div>`
+    message: 疑似未转义的用户输入拼接 HTML，存在 XSS 风险
+    severity: WARNING
+    languages: [javascript, typescript]
