@@ -34,10 +34,10 @@ describe("parsePositiveInt", () => {
     expect(parsePositiveInt("42")).toBe(42);
   });
 
-  // it("returns null for empty string", () => {
-  //   expect(parsePositiveInt("")).toBeNull();
-  //   expect(parsePositiveInt("   ")).toBeNull();
-  // });
+  it("returns null for empty string", () => {
+    expect(parsePositiveInt("")).toBeNull();
+    expect(parsePositiveInt("   ")).toBeNull();
+  });
 
   // it("returns null for zero and negative", () => {
   //   expect(parsePositiveInt("0")).toBeNull();
