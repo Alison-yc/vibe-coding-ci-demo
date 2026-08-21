@@ -1,6 +1,6 @@
 /**
  * 正常业务函数 —— 供单测与覆盖率门禁演示。
- * CI 中 Semgrep 仅扫描此文件（及未来真实业务代码）。
+ * CI 中 Semgrep 扫描此文件及 App.tsx。
  */
 
 export function add(a: number, b: number): number {
