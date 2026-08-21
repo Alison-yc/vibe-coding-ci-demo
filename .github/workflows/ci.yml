@@ -19,11 +19,20 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: TypeScript check
-        run: yarn lint
+      - name: Lint and format check
+        run: yarn lint && yarn format:check
 
       - name: Unit tests with coverage gate
         run: yarn test:coverage
+
+      - name: Build frontend
+        run: yarn build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E tests
+        run: yarn test:e2e
 
       - name: Install Semgrep
         run: pip install semgrep
@@ -37,3 +46,10 @@ jobs:
         with:
           name: coverage-report
           path: coverage/
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/

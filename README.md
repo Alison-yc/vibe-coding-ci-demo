@@ -1,6 +1,6 @@
 # vibe-coding-ci-demo
 
-最小 Demo 仓库：演示 **CI + 单测覆盖率门禁 + Semgrep SAST** 完整闭环。
+最小 Demo 仓库：演示 **CI + ESLint/Prettier + 单测覆盖率 + React UI + Playwright E2E + Semgrep SAST** 完整闭环。
 
 配套学习文档：[VIBE_CODING_CI_SAST_学习手册.md](../VIBE_CODING_CI_SAST_学习手册.md)
 
@@ -10,12 +10,17 @@
 vibe-coding-ci-demo/
 ├── .github/workflows/ci.yml   # GitHub Actions 流水线
 ├── .semgrep.yml               # 自定义 SAST 规则
+├── e2e/calculator.spec.ts     # Playwright E2E
 ├── src/
-│   ├── math.ts                # 正常业务代码（CI 扫描 + 单测覆盖）
-│   ├── math.test.ts           # Vitest 单测
-│   └── bad-examples.ts        # 故意含漏洞（仅本地演示，不进 CI 扫描）
-├── vitest.config.ts           # 覆盖率阈值 80% 门禁
-└── package.json
+│   ├── lib/math.ts            # 业务逻辑 + 单测
+│   ├── lib/bad-examples.ts    # Semgrep 演示（不进 CI 扫描）
+│   ├── components/ui/         # shadcn 组件
+│   └── App.tsx                # Number Toolkit 单页 UI
+├── eslint.config.js           # ESLint flat config
+├── .prettierrc                # Prettier 规则
+├── playwright.config.ts
+├── vite.config.ts
+└── vitest.config.ts           # 覆盖率阈值 80%
 ```
 
 ## 快速开始
@@ -24,24 +29,13 @@ vibe-coding-ci-demo/
 
 - Node.js 20+
 - Yarn
-- **Semgrep CLI**（二选一，不要用 `npm i semgrep`）：
+- **Semgrep CLI**（不要用 `npm i semgrep`）：
+
   ```bash
   brew install semgrep
   # 或
   pip3 install semgrep
   ```
-
-> **常见坑**：`npm i semgrep -g` 安装的是 npm 占位包 `semgrep@0.0.1`，**没有** `semgrep` 命令。真正的 Semgrep 是 Python/ brew 工具。
-
-安装后验证：
-
-```bash
-semgrep --version
-# 若 command not found，但 pip 已装，可临时：
-export PATH="$HOME/Library/Python/3.9/bin:$PATH"
-```
-
-项目内 `yarn semgrep` 会通过 `scripts/semgrep.sh` 自动查找常见安装路径。
 
 ### 安装与运行
 
@@ -49,87 +43,89 @@ export PATH="$HOME/Library/Python/3.9/bin:$PATH"
 cd vibe-coding-ci-demo
 yarn install
 
-# 1. TypeScript 类型检查
+# 开发 UI
+yarn dev
+
+# TypeScript + ESLint
 yarn lint
 
-# 2. 单测 + 覆盖率门禁（低于 80% 行覆盖会 fail）
+# 自动修复 ESLint 可修复项
+yarn lint:fix
+
+# Prettier 格式化
+yarn format
+
+# Prettier 检查（CI 用，不修改文件）
+yarn format:check
+
+# 单测 + 覆盖率门禁
 yarn test:coverage
 
-# 3. SAST 扫描（仅扫描 math.ts，必须通过）
+# 构建
+yarn build
+
+# E2E（需先 build，Playwright 会自动起 preview 服务）
+yarn build
+yarn test:e2e
+
+# 肉眼观看 E2E（Playwright 不支持 CLI --slow-mo，用下面脚本）
+yarn test:e2e:headed   # 有浏览器窗口
+yarn test:e2e:slow     # 有窗口 + 每步延迟 800ms
+yarn test:e2e:ui       # Playwright UI 调试面板
+yarn test:e2e:debug    # 逐步暂停调试
+
+# SAST
 yarn semgrep
+yarn semgrep:demo   # 扫描故意漏洞文件
 
-# 4. 演示 Semgrep 如何检出漏洞（扫描 bad-examples.ts）
-yarn semgrep:demo
-
-# 5. 本地模拟完整 CI
+# 本地模拟完整 CI
 yarn ci
 ```
 
-## CI 流程说明
+## UI 说明
 
-push 或 PR 到 `main` 时，GitHub Actions 依次执行：
+单页 **Number Toolkit**（React + shadcn），三个卡片对应 `math.ts` 函数：
+
+| 卡片       | 函数               | E2E testid                                    |
+| ---------- | ------------------ | --------------------------------------------- |
+| 加法       | `add`              | `add-a`, `add-b`, `add-submit`, `add-result`  |
+| 钳制       | `clamp`            | `clamp-value`, `clamp-min`, `clamp-max`, ...  |
+| 正整数解析 | `parsePositiveInt` | `parse-input`, `parse-submit`, `parse-result` |
+
+## CI 流程
+
+push 或 PR 时，GitHub Actions 依次执行：
 
 ```
-checkout → yarn install → yarn lint → yarn test:coverage → semgrep → upload coverage artifact
+lint + format:check → test:coverage → build → playwright e2e → semgrep → upload artifacts
 ```
 
-任一步失败 → PR 显示红叉 → 若配置了 branch protection 则无法 merge。
+失败时会上传 `coverage-report` 和 `playwright-report`。
 
 ## 实验建议
 
-### 实验 1：触发覆盖率 fail
+### 触发覆盖率 fail
 
-删除 `math.test.ts` 中某个测试用例，再运行：
+删除 `src/lib/math.test.ts` 中某个用例，运行 `yarn test:coverage`。
 
-```bash
-yarn test:coverage
-```
+### 触发 E2E fail
 
-观察 Vitest 因阈值不达标而 exit 1。
+修改 `App.tsx` 中结果文案但不改测试，运行 `yarn test:e2e`。
 
-### 实验 2：观察 Semgrep 检出
+### 观察 Semgrep 检出
 
 ```bash
 yarn semgrep:demo
 ```
 
-应看到 `bad-examples.ts` 中被检出的：
-
-- `hardcoded-api-key`（硬编码密钥）
-- `dangerous-eval`（eval 调用）
-- `sql-string-concat`（SQL 拼接）
-- `unsafe-html-concat`（XSS 风险）
-
-### 实验 3：写自定义 Semgrep 规则
-
-在 `.semgrep.yml` 新增一条 rule，在 `bad-examples.ts` 加对应模式，用 `yarn semgrep:demo` 验证。
-
-### 实验 4：推送到 GitHub
+### 首次 E2E 需安装浏览器
 
 ```bash
-git init
-git add .
-git commit -m "feat: add CI coverage and semgrep demo"
-gh repo create vibe-coding-ci-demo --public --source=. --push
-```
-
-开 PR 后观察 GitHub Actions checks。
-
-## 面试话术
-
-> 我在 Demo 仓库落地了完整 CI 闭环：TypeScript 检查、Vitest 覆盖率门禁（80% 阈值）、Semgrep SAST。本地与 CI 跑同一套 `yarn ci` 脚本。Semgrep 用 YAML 自定义规则拦截硬编码密钥和 eval；Review Agent 作为启发式补充，Semgrep 作为确定性门禁。故意漏洞文件仅用于本地演示，生产代码扫描路径与 CI 一致。
-
-## 与 Review Agent 的关系
-
-本 Demo 未集成 LLM Review Agent（保持最小）。Review Prompt 模板见学习手册第六章。完整流程：
-
-```
-PR → CI(lint+test+semgrep) → Review Agent 读 diff → 人工研判标红项 → merge
+npx playwright install chromium
 ```
 
 ## 后续扩展
 
-- [ ] 加 Playwright E2E（若引入 UI）
-- [ ] GitHub Action 调用 LLM 做 PR Review
-- [ ] Codecov 集成 diff coverage
-- [ ] 引用官方 ruleset：`semgrep --config p/owasp-top-ten`
+- [ ] Review Agent GitHub Action
+- [ ] Codecov diff coverage
+- [ ] React Testing Library 集成测试
